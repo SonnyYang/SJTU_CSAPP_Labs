@@ -1,0 +1,48 @@
+#name: Ma Yichun
+#ID:   5130379009
+
+#init
+	irmovl Stack, %esp
+	rrmovl %esp, %ebp
+	irmovl ele1, %edx
+	pushl %edx
+	call rsum_list
+	halt
+
+#element list
+.align 4
+ele1:
+	.long 0x00a
+	.long ele2
+ele2:
+	.long 0x0b0
+	.long ele3
+ele3:
+    .long 0xc00
+    .long 0
+
+#rsum_list
+rsum_list:
+	pushl %ebp
+	rrmovl %esp, %ebp
+	pushl %eax
+	mrmovl 8(%ebp), %ebx
+	andl %ebx, %ebx
+	je End
+
+	mrmovl (%ebx), %eax
+	mrmovl 4(%ebx), %ebx
+	pushl %ebx
+	call rsum_list
+	mrmovl 4(%esp), %ebx
+	addl %ebx, %eax
+
+
+End:
+	rrmovl %ebp, %esp
+	popl %ebp
+    ret
+
+#stack
+.pos 0x100
+Stack:

@@ -1,0 +1,299 @@
+#Name: Ma Yichun
+#ID  : 5130379009
+
+#Changes in this file:
+#1.using iaddl to substitute instruction like "rrmovl $A, %B" followed by "addl/subl %B, %C"
+
+#2.unrolling 17 times
+
+#3.using jump table to deal with the rest 1~16 elements
+
+#4.The procedure of this program:
+#    (1)minus $17 to %edx
+#    (2)deal with 17 elements in a loop
+#    (3)after the loop, %edx will have -17 to -1, which stands for 0 to 16, so the label "jmpTable" is at the bottom of jump table
+#    (4)by addl %edx, %edx twice, we can get (4 * %edx)
+#    (5)by using push and ret, we can make a jump table
+
+#5.some sequence detail of the program:
+#    (1)in the loop: the instruction sequence of each element is "mrmovl", "andl", "rmmvol", "jle", "iaddl"
+#        I eliminate load/use hazard of "mrmovl + andl/pushl", and eliminate one bubble for mis-prediction hazard, and that will be explained in "pipe-full.hcl"
+#    (2)in the label "Rest", I move "mrmovl (%ebx), %edi" in "rLoop1" into the combination of "mrmovl + push + ret" to reduce all three bubbles of return hazard. Because I do not use %edi in other place, so I use it for this special place.The detail of the combination of these four instruction  will be explained in "pipe-full.hcl"
+
+
+
+#/* $begin ncopy-ys */
+##################################################################
+# ncopy.ys - Copy a src block of len ints to dst.
+# Return the number of positive ints (>0) contained in src.
+#
+# Include your name and ID here.
+#
+# Describe how and why you modified the baseline code.
+#
+##################################################################
+# Do not modify this portion
+# Function prologue.
+ncopy:	pushl %ebp		# Save old frame pointer
+	rrmovl %esp,%ebp	# Set up new frame pointer
+	pushl %esi		# Save callee-save regs
+	pushl %ebx
+	pushl %edi
+	mrmovl 8(%ebp),%ebx	# src
+	mrmovl 16(%ebp),%edx	# len
+	mrmovl 12(%ebp),%ecx	# dst
+
+##################################################################
+# You can modify this portion
+	# Loop header
+	xorl %eax,%eax		# count = 0;
+	iaddl $-17, %edx
+	jl Rest
+
+Loop1:
+	mrmovl (%ebx), %esi	# read val from src...	
+	andl %esi, %esi		# val <= 0?
+	rmmovl %esi, (%ecx)	# ...and store it to dst
+	jle Loop2		# if so, goto Loopi2:
+	iaddl $1, %eax		# count++
+Loop2:
+	mrmovl 4(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 4(%ecx)
+	jle Loop3
+	iaddl $1, %eax
+Loop3:
+	mrmovl 8(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 8(%ecx)
+	jle Loop4
+	iaddl $1, %eax
+Loop4:
+	mrmovl 12(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 12(%ecx)
+	jle Loop5
+	iaddl $1, %eax
+Loop5:
+	mrmovl 16(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 16(%ecx)
+	jle Loop6
+	iaddl $1, %eax
+Loop6:
+	mrmovl 20(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 20(%ecx)
+	jle Loop7
+	iaddl $1, %eax
+Loop7:
+	mrmovl 24(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 24(%ecx)
+	jle Loop8
+	iaddl $1, %eax
+Loop8:
+	mrmovl 28(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 28(%ecx)
+	jle Loop9
+	iaddl $1, %eax
+Loop9:
+	mrmovl 32(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 32(%ecx)
+	jle Loop10
+	iaddl $1, %eax
+Loop10:
+	mrmovl 36(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 36(%ecx)
+	jle Loop11
+	iaddl $1, %eax
+Loop11:
+	mrmovl 40(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 40(%ecx)
+	jle Loop12
+	iaddl $1, %eax
+Loop12:
+	mrmovl 44(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 44(%ecx)
+	jle Loop13
+	iaddl $1, %eax
+Loop13:
+	mrmovl 48(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 48(%ecx)
+	jle Loop14
+	iaddl $1, %eax
+Loop14:
+	mrmovl 52(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 52(%ecx)
+	jle Loop15
+	iaddl $1, %eax
+Loop15:
+	mrmovl 56(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 56(%ecx)
+	jle Loop16
+	iaddl $1, %eax
+Loop16:
+	mrmovl 60(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 60(%ecx)
+	jle Loop17
+	iaddl $1, %eax
+Loop17:
+	mrmovl 64(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 64(%ecx)
+	jle LoopEnd
+	iaddl $1, %eax
+LoopEnd:
+	iaddl $68, %ebx
+	iaddl $68, %ecx
+	iaddl $-17, %edx
+	jge Loop1
+
+Rest:
+	addl %edx, %edx
+	addl %edx, %edx
+	mrmovl jmpTable(%edx), %edx
+	mrmovl (%ebx), %edi
+	pushl %edx
+	ret
+
+
+.long Done
+.long rLoop1
+.long rLoop2
+.long rLoop3
+.long rLoop4
+.long rLoop5
+.long rLoop6
+.long rLoop7
+.long rLoop8
+.long rLoop9
+.long rLoop10
+.long rLoop11
+.long rLoop12
+.long rLoop13
+.long rLoop14
+.long rLoop15
+.long rLoop16
+jmpTable:
+
+rLoop16:
+	mrmovl 60(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 60(%ecx)	
+	jle rLoop15
+	iaddl $1, %eax
+rLoop15:
+	mrmovl 56(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 56(%ecx)
+	jle rLoop14
+	iaddl $1, %eax
+rLoop14:
+	mrmovl 52(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 52(%ecx)
+	jle rLoop13
+	iaddl $1, %eax
+rLoop13:
+	mrmovl 48(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 48(%ecx)
+	jle rLoop12
+	iaddl $1, %eax
+rLoop12:
+	mrmovl 44(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 44(%ecx)
+	jle rLoop11
+	iaddl $1, %eax
+rLoop11:
+	mrmovl 40(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 40(%ecx)
+	jle rLoop10
+	iaddl $1, %eax
+rLoop10:
+	mrmovl 36(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 36(%ecx)
+	jle rLoop9
+	iaddl $1, %eax
+rLoop9:
+	mrmovl 32(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 32(%ecx)
+	jle rLoop8
+	iaddl $1, %eax
+rLoop8:
+	mrmovl 28(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 28(%ecx)
+	jle rLoop7
+	iaddl $1, %eax
+rLoop7:
+	mrmovl 24(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 24(%ecx)
+	jle rLoop6
+	iaddl $1, %eax
+rLoop6:
+	mrmovl 20(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 20(%ecx)
+	jle rLoop5
+	iaddl $1, %eax
+rLoop5:
+	mrmovl 16(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 16(%ecx)
+	jle rLoop4
+	iaddl $1, %eax
+rLoop4:
+	mrmovl 12(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 12(%ecx)
+	jle rLoop3
+	iaddl $1, %eax
+rLoop3:
+	mrmovl 8(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 8(%ecx)
+	jle rLoop2
+	iaddl $1, %eax
+rLoop2:
+	mrmovl 4(%ebx), %esi
+	andl %esi, %esi
+	rmmovl %esi, 4(%ecx)
+	jle rLoop1
+	iaddl $1, %eax
+rLoop1:
+	andl %edi, %edi
+	rmmovl %edi, (%ecx)
+	jle Done
+	iaddl $1, %eax
+
+
+##################################################################
+# Do not modify the following section of code
+# Function epilogue.
+Done:
+	popl %edi               # Restore callee-save registers
+	popl %ebx
+	popl %esi
+	rrmovl %ebp, %esp
+	popl %ebp
+	ret
+##################################################################
+# Keep the following label at the end of your function
+End:
+#/* $end ncopy-ys */

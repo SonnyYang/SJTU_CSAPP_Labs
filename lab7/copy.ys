@@ -1,0 +1,57 @@
+#name: Ma Yichun
+#ID:   5130379009
+
+#init
+	irmovl Stack, %esp
+	rrmovl %esp, %ebp
+	irmovl $3, %eax
+	pushl %eax
+	irmovl dest, %eax
+	pushl %eax
+	irmovl src, %eax
+	pushl %eax
+	call copy_block
+	halt
+
+.align 4
+#Source block
+src:
+	.long 0x00a
+	.long 0x0b0
+	.long 0xc00
+
+#Destination block
+dest:
+	.long 0x111
+	.long 0x222
+	.long 0x333
+
+
+#copy_block
+copy_block:
+	pushl %ebp
+	rrmovl %esp, %ebp
+ 	irmovl $0, %eax
+	irmovl $0, %esi
+	irmovl $4, %edi
+	mrmovl 8(%ebp), %ebx
+	mrmovl 12(%ebp), %ecx
+	mrmovl 16(%ebp), %edx
+
+Loop:
+	mrmovl (%ebx), %eax
+	xorl %eax, %esi
+	rmmovl %eax, (%ecx)
+	addl %edi, %ecx
+	addl %edi, %ebx
+	irmovl $1, %eax
+	subl %eax, %edx
+	jne Loop
+
+	rrmovl %esi, %eax
+	popl %ebp
+    ret
+
+#stack
+.pos 0x100
+Stack:
